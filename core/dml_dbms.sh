@@ -47,7 +47,7 @@ function dml_main(){
 function dml_table(){
     local table_name="$1"
     PS3="You using -> $db_name database, and $table_name table, please enter your choice: "
-    options=("Insert" "Update" "Delete" "Select Mod" "Table Info"  "Back")
+    options=("Table Info" "Insert" "Filter Mod" "Back")
     select option in "${options[@]}"
     do
         case $option in
@@ -57,14 +57,9 @@ function dml_table(){
             "Insert")
                 insert_row "$db_name" "$table_name"
                 ;;
-            "Update")
-                update "$db_name" "$table_name"
-                ;;
-            "Delete")
-                delete "$db_name" "$table_name"
-                ;;
-            "Select Mod")
-                select_data "$db_name" "$table_name"
+            "Filter Mod")
+                log "INFO" "Filtering data in table '$table_name'."
+                bash "$DML_DBMS_DIR_PATH/dql_dbms.sh" "$db_name" "$table_name"
                 ;;
             "Back")
                 return 0
@@ -75,6 +70,8 @@ function dml_table(){
         esac
     done
 }
+
+
 
 
 dml_main

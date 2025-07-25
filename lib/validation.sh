@@ -1,5 +1,4 @@
 VALIDATION_DIR_PATH="$(dirname ${BASH_SOURCE[0]})"
-echo "from validtion $VALIDATION_DIR_PATH "
 
 bash $VALIDATION_DIR_PATH/log.sh
 

@@ -1,0 +1,43 @@
+[2025-07-25 19:02:39] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:02:39] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:02:41] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:02:43] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:04:15] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:04:15] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:04:21] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:04:32] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:04:43] [INFO] the user slelect filter 't1'.
+[2025-07-25 19:08:22] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:08:22] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:08:25] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:08:26] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:08:31] [INFO] the user slelect filter 't1'.
+[2025-07-25 19:08:31] [INFO] Filtering data in table    dsf sdfd af df 't1'.
+[2025-07-25 19:13:43] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:13:43] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:13:46] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:13:48] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:13:53] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:14:38] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:14:38] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:14:41] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:14:42] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:14:44] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:14:54] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:15:34] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:15:34] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:15:40] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:15:42] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:15:44] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:15:51] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:18:49] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:18:58] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:19:10] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:25:54] [INFO] Name 'teva' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../lib/../database'
+[2025-07-25 19:25:54] [INFO] Connecting to database 'teva'.
+[2025-07-25 19:25:59] [INFO] Name 't1' exists in '/home/tawfik/Desktop/ITI/DBMS_bash/core/../database/teva'
+[2025-07-25 19:26:03] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:26:14] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:26:24] [INFO] Updating filtered rows in 't1'.
+[2025-07-25 19:26:49] [INFO] Filtering data in table 't1'.
+[2025-07-25 19:26:55] [INFO] Deleting filtered rows from 't1'.
