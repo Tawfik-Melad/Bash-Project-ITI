@@ -76,7 +76,7 @@ validate_nullable() {
     local is_nullable="$2"
     local column_name="$3"
 
-    if [[ "$is_nullable" == "yes" && -z "$value" ]]; then
+    if [[ "$is_nullable" == "yes" ]]; then
         return 0
     elif [[ -z "$value" ]]; then
         log "ERROR" "Value for $column_name cannot be empty."
@@ -111,6 +111,10 @@ validate_primary_key() {
         if [[ -s "$data_file" ]]; then
             local existing_values
             existing_values=$(cut -d: -f$((column_index + 1)) "$data_file")
+            echo $column_index
+            echo $data_file
+            echo $value
+            echo "hi -> $existing_values"
             if echo "$existing_values" | grep -xq "$value"; then
                 log "ERROR" "Primary key violation: '$value' already exists for $column_name."
                 return 1

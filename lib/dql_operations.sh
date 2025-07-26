@@ -167,10 +167,16 @@ function update_filtered_rows {
         return
     fi
 
-    # Get field index
+    # Get field index and metadata
     local idx=-1
+    local field_metadata=""
     for i in "${!FIELDS[@]}"; do
-        [[ "${FIELDS[i]}" == "$field" ]] && idx=$i
+        if [[ "${FIELDS[i]}" == "$field" ]]; then
+            idx=$i
+            # Get field metadata from the meta file (line number = i + 2, since first line is header)
+            field_metadata=$(sed -n "$((i+2))p" "$meta_file")
+            break
+        fi
     done
 
     if (( idx == -1 )); then
@@ -178,11 +184,53 @@ function update_filtered_rows {
         return
     fi
 
+
+    echo $field_metadata
+    # Parse field metadata (format: field_name:data_type:nullable:primary_key)
+    local data_type=$(echo "$field_metadata" | cut -d: -f2)
+    local is_primary=$(echo "$field_metadata" | cut -d: -f3)
+    local is_nullable=$(echo "$field_metadata" | cut -d: -f4)
+
+    echo "here -> $data_type $is_primary $field"
+    log "INFO" "Field '$field' metadata: data_type=$data_type, nullable=$is_nullable, primary=$is_primary"
+
     read -p "Enter the new value for field '$field': " new_value
-    if [[ -z "$new_value" ]]; then
-        log "WARNING" "Empty value provided for update"
-        return
+    
+    # 1. Validate nullable constraint first
+    if ! validate_nullable "$new_value" "$is_nullable" "$field"; then
+        log "ERROR" "Validation failed for field '$field'"
+        return 1
     fi
+
+    # 2. If the field is NOT nullable, validate the data type (i.e., only when it's required to have a value)
+    if [[ "$is_nullable" == "no" ]]; then
+        if ! validate_data_type "$new_value" "$data_type" "$field"; then
+            log "ERROR" "Validation failed for field '$field'"
+            return 1
+        fi
+    fi
+
+    # 3. OR: If the value is NOT empty, validate data type anyway (e.g., optional field but user entered something)
+    if [[ -n "$new_value" ]]; then
+        if ! validate_data_type "$new_value" "$data_type" "$field"; then
+            log "ERROR" "Validation failed for field '$field'"
+            return 1
+        fi
+    fi
+
+    if [[ "$is_primary" == "yes" ]]; then
+
+        local line_count
+        line_count=$(wc -l < "$temp_file")
+        echo "HI ----------> $line_count"
+        if (( line_count > 1 )); then
+            echo "Error: you trying to update ($line_count) row with the same value for primary feild"
+            return 1
+        fi
+        validate_primary_key "$new_value" "$is_primary" "$data_file" "$idx" "$field"
+    fi
+
+       
 
     log "INFO" "Updating field '$field' to value '$new_value' for filtered rows"
 
