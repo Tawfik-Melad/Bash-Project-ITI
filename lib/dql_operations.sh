@@ -16,8 +16,16 @@ mapfile -t FIELDS < <(tail -n +2 "$meta_file" | cut -d: -f1)
 # Initialize filtered data file
 cp "$data_file" "$temp_file"
 
+# Check if fzf is available
+if ! command -v fzf &> /dev/null; then
+    USE_FZF=false
+else
+    USE_FZF=true
+fi
+
 # Function: reset filter to full table
 function reset_filter {
+    log "INFO" "Resetting filter for table '$table_name'"
     cp "$data_file" "$temp_file"
 }
 
@@ -43,84 +51,131 @@ function print_data {
     ' "$1"
 }
 
+# Function: show field selection with fzf
+function select_field_with_fzf() {
+    if [[ "$USE_FZF" == true ]]; then
+        local selected
+        selected=$(printf '%s\n' "${FIELDS[@]}" | fzf --header="Select field to filter" --height=8 --reverse --border)
+        echo "$selected"
+    else
+        # Fallback to simple selection
+        echo "Available fields: ${FIELDS[*]}"
+        read -p "Enter field name: " field
+        echo "$field"
+    fi
+}
+
 # Function: filter data based on user input
 function filter_data {
-    log "INFO" "Filtering data in table '$table_name'."
+    log "INFO" "Starting filter operation for table '$table_name'"
+    
     while true; do
-        echo -e "\nAvailable fields: ${FIELDS[@]}"
-        read -p "Enter field to filter (or 'done' to stop): " field
-        [[ "$field" == "done" ]] && break
+        local field
+        field=$(select_field_with_fzf)
+        
+        if [[ -z "$field" ]]; then
+            log "INFO" "User cancelled field selection"
+            break
+        fi
 
         # Get field index
-        idx=-1
+        local idx=-1
         for i in "${!FIELDS[@]}"; do
             [[ "${FIELDS[i]}" == "$field" ]] && idx=$((i+1))
         done
 
         if (( idx == -1 )); then
-            echo "Invalid field."
+            log "WARNING" "Invalid field selected: $field"
             continue
         fi
 
         read -p "Enter value to match: " value
+        if [[ -z "$value" ]]; then
+            log "WARNING" "Empty value provided for filtering"
+            continue
+        fi
+
+        log "INFO" "Applying filter: field='$field', value='$value'"
         awk -F: -v idx="$idx" -v val="$value" '$idx == val' "$temp_file" > tmp && mv tmp "$temp_file"
 
-        echo -e "\nFiltered result:"
-        print_header
-        print_data "$temp_file"
+        local row_count
+        row_count=$(wc -l < "$temp_file")
+        log "INFO" "Filter applied, $row_count rows remaining"
 
-        if (( $(wc -l < "$temp_file") == 0 )); then
-            echo -e "\n⚠️  No matching rows left."
+        if (( row_count == 0 )); then
+            log "WARNING" "No matching rows found after filter"
             break
         fi
 
-        break  # Apply only one filter at a time
+        # Ask if user wants to apply another filter
+        if [[ "$USE_FZF" == true ]]; then
+            local continue_filter
+            continue_filter=$(echo -e "Yes\nNo" | fzf --header="Apply another filter?" --height=5 --reverse --border)
+            [[ "$continue_filter" != "Yes" ]] && break
+        else
+            read -p "Apply another filter? (y/n): " continue_filter
+            [[ "$continue_filter" != "y" && "$continue_filter" != "Y" ]] && break
+        fi
     done
 }
 
-
 function delete_filtered_rows {
-    log "INFO" "Deleting filtered rows from '$table_name'."
+    log "INFO" "Starting delete operation for filtered rows in '$table_name'"
     
     if [[ ! -s "$temp_file" ]]; then
-        echo "❌ No filtered rows to delete."
+        log "WARNING" "No filtered rows to delete"
         return
     fi
 
-    # Backup before delete (optional)
+    local row_count
+    row_count=$(wc -l < "$temp_file")
+    log "INFO" "Preparing to delete $row_count filtered rows"
+
+    # Backup before delete
     cp "$data_file" "${data_file}.bak"
+    log "INFO" "Created backup: ${data_file}.bak"
 
     # Delete matching lines from main file
     grep -v -F -x -f "$temp_file" "$data_file" > tmp && mv tmp "$data_file"
     cp "$data_file" "$temp_file"  # reset temp to reflect delete
 
-    echo -e "\n🗑️ Deleted rows. Updated table:"
-    print_header
-    print_data "$temp_file"
+    log "INFO" "Successfully deleted $row_count rows from '$table_name'"
 }
 
-
 function update_filtered_rows {
-    log "INFO" "Updating filtered rows in '$table_name'."
+    log "INFO" "Starting update operation for filtered rows in '$table_name'"
 
     if [[ ! -s "$temp_file" ]]; then
-        echo "❌ No rows to update."
+        log "WARNING" "No rows to update"
         return
     fi
 
-    echo -e "\nAvailable fields: ${FIELDS[@]}"
-    read -p "Enter the field to update: " field_name
-    idx=-1
+    local field
+    field=$(select_field_with_fzf)
+    
+    if [[ -z "$field" ]]; then
+        log "INFO" "User cancelled field selection for update"
+        return
+    fi
+
+    # Get field index
+    local idx=-1
     for i in "${!FIELDS[@]}"; do
-        [[ "${FIELDS[i]}" == "$field_name" ]] && idx=$i
+        [[ "${FIELDS[i]}" == "$field" ]] && idx=$i
     done
 
     if (( idx == -1 )); then
-        echo "Invalid field name."
+        log "ERROR" "Invalid field name: $field"
         return
     fi
 
-    read -p "Enter the new value for field '$field_name': " new_value
+    read -p "Enter the new value for field '$field': " new_value
+    if [[ -z "$new_value" ]]; then
+        log "WARNING" "Empty value provided for update"
+        return
+    fi
+
+    log "INFO" "Updating field '$field' to value '$new_value' for filtered rows"
 
     awk -F: -v OFS=: -v col="$((idx+1))" -v val="$new_value" '
     BEGIN {
@@ -142,7 +197,5 @@ function update_filtered_rows {
 
     cp "$data_file" "$temp_file"  # update temp as well
 
-    echo -e "\n✅ Updated table:"
-    print_header
-    print_data "$temp_file"
+    log "INFO" "Successfully updated filtered rows in '$table_name'"
 }

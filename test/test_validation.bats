@@ -11,6 +11,7 @@ load '../lib/validation.sh'
   run is_valid_name "1invalid"
   [ "$status" -ne 0 ]
 }
+
 @test "Name with special characters fails" {
   run is_valid_name "invalid@name"
   [ "$status" -ne 0 ]

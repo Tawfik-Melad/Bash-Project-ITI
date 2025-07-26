@@ -1,0 +1,2 @@
+column_name:data_type:is_primary:is_nullable
+c1:int:yes:no

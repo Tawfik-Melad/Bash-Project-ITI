@@ -1,0 +1,5 @@
+1-  > and < operatoin filter
+2- havy testing
+3- connect to database using password
+4-UI ->bouns
+5-clean the code
