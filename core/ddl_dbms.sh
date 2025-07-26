@@ -1,4 +1,3 @@
-
 #!/bin/bash
 DDL_DBMS_DIR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -11,7 +10,7 @@ if ! command -v fzf &> /dev/null; then
     log "WARNING" "fzf not found, falling back to select menu"
     USE_FZF=false
 else
-    USE_FZF=false
+    USE_FZF=true
 fi
 
 function show_menu_with_fzf() {
@@ -19,14 +18,12 @@ function show_menu_with_fzf() {
     shift
     local menu_options=("$@")
     
-    if [[ "$USE_FZF" == true ]]; then
+    if [[  "$USE_FZF" == true ]]; then
         local selected
-        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 --reverse --border)
-        if [[ -n "$selected" ]]; then
-            echo "$selected"
-        else
-            echo ""
-        fi
+        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 \
+        --border --reverse --color=fg:#00ffcc,bg:#1b1b1b,hl:#ffaa00,fg+:#ffffff,bg+:#005f5f,hl+:#ff5f00 \
+        --inline-info  --preview='cat {}' --preview-window=right:50%:wrap)
+        echo "$selected"
     else
         # Fallback to select
         PS3="Choose an operation: "
@@ -35,9 +32,9 @@ function show_menu_with_fzf() {
                 echo "$option"
                 break
             else
-                log "WARNING" "Invalid selection, showing menu again"
-                echo "Invalid option, please try again:"
-                continue
+                log "WARNING" "Invalid selection, showing menu again 2"
+                echo ""
+                break
             fi
         done
     fi
@@ -51,58 +48,37 @@ function ddl_main(){
         log "INFO" "Showing DDL menu options"
         
         local selected_option
-        selected_option=$(show_menu_with_fzf "DDL Operations" "${options[@]}")
-        
-        if [[ -z "$selected_option" ]]; then
-            log "INFO" "User cancelled menu selection"
-            continue
-        fi
+        selected_option=$(show_menu_with_fzf "DDL Opedfsadfdrations" "${options[@]}")
+
         
         case "$selected_option" in
             "Create Database")
                 log "INFO" "User selected Create Database operation"
                 read -p "Enter the database name to create: " db_name
-                if [[ -n "$db_name" ]]; then
-                    create_database "$db_name"
-                else
-                    log "WARNING" "Empty database name provided"
-                fi
+                create_database "$db_name"
+
                 ;;
             "Drop Database")
                 log "INFO" "User selected Drop Database operation"
                 read -p "Enter the database name to drop: " db_name
-                if [[ -n "$db_name" ]]; then
-                    delete_database "$db_name"
-                else
-                    log "WARNING" "Empty database name provided"
-                fi
+                delete_database "$db_name"
+
                 ;;
             "List Databases")
                 log "INFO" "User selected List Databases operation"
-                if [ -d "$DDL_DBMS_DIR_PATH/../database" ]; then
                     local databases
                     databases=$(ls -1 "$DDL_DBMS_DIR_PATH/../database" 2>/dev/null)
-                    if [[ -n "$databases" ]]; then
-                        log "INFO" "Available databases: $databases"
-                    else
-                        log "INFO" "No databases found"
-                    fi
-                else
-                    log "INFO" "No databases found"
-                fi
+                    echo -e "\n📂 Available Databases:"
+                    echo "$databases"
                 ;;
             "Connect to Database")
                 log "INFO" "User selected Connect to Database operation"
                 read -p "Enter the database name to connect: " db_name
-                if [[ -n "$db_name" ]]; then
-                    if connect_to_database "$db_name"; then
-                        log "INFO" "Successfully connected to database '$db_name'"
-                        bash "$DDL_DBMS_DIR_PATH/dml_dbms.sh" "$db_name"
-                    else
-                        log "ERROR" "Failed to connect to database '$db_name'"
-                    fi
+                if connect_to_database "$db_name"; then
+                    log "INFO" "Successfully connected to database '$db_name'"
+                    bash "$DDL_DBMS_DIR_PATH/dml_dbms.sh" "$db_name"
                 else
-                    log "WARNING" "Empty database name provided"
+                    log "ERROR" "Failed to connect to database '$db_name'"
                 fi
                 ;;
             "Exit")

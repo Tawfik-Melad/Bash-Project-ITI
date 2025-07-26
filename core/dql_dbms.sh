@@ -19,19 +19,16 @@ else
 fi
 
 function show_menu_with_fzf() {
-    local options=("$@")
-    local title="$1"
+    local title="$1 Database"
     shift
     local menu_options=("$@")
     
-    if [[ "$USE_FZF" == true ]]; then
+    if [[  "$USE_FZF" == true ]]; then
         local selected
-        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 --reverse --border)
-        if [[ -n "$selected" ]]; then
-            echo "$selected"
-        else
-            echo ""
-        fi
+        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 \
+        --border --reverse --color=fg:#00ffcc,bg:#1b1b1b,hl:#ffaa00,fg+:#ffffff,bg+:#005f5f,hl+:#ff5f00 \
+        --inline-info  --preview='cat {}' --preview-window=right:50%:wrap)
+        echo "$selected"
     else
         # Fallback to select
         PS3="Choose an operation: "
@@ -40,9 +37,9 @@ function show_menu_with_fzf() {
                 echo "$option"
                 break
             else
-                log "WARNING" "Invalid selection, showing menu again"
-                echo "Invalid option, please try again:"
-                continue
+                log "WARNING" "Invalid selection, showing menu again 2"
+                echo ""
+                break
             fi
         done
     fi
@@ -68,10 +65,6 @@ function dql_main(){
         local selected_option
         selected_option=$(show_menu_with_fzf "DQL Operations for '$table_name'" "${options[@]}")
         
-        if [[ -z "$selected_option" ]]; then
-            log "INFO" "User cancelled menu selection"
-            continue
-        fi
         
         case "$selected_option" in
             "Filter")
@@ -111,22 +104,5 @@ function dql_main(){
         esac
     done
 }
-
-# Validate inputs
-if [[ -z "$db_name" || -z "$table_name" ]]; then
-    log "ERROR" "Missing required parameters: db_name='$db_name', table_name='$table_name'"
-    exit 1
-fi
-
-# Check if database and table exist
-if [[ ! -d "$DQL_DBMS_DIR_PATH/../database/$db_name" ]]; then
-    log "ERROR" "Database '$db_name' does not exist"
-    exit 1
-fi
-
-if [[ ! -f "$DQL_DBMS_DIR_PATH/../database/$db_name/$table_name" ]]; then
-    log "ERROR" "Table '$table_name' does not exist in database '$db_name'"
-    exit 1
-fi
 
 dql_main

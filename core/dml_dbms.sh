@@ -17,18 +17,16 @@ else
 fi
 
 function show_menu_with_fzf() {
-    local title="$1"
+    local title="$1 Database"
     shift
     local menu_options=("$@")
     
-    if [[ "$USE_FZF" == true ]]; then
+    if [[  "$USE_FZF" == true ]]; then
         local selected
-        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 --reverse --border)
-        if [[ -n "$selected" ]]; then
-            echo "$selected"
-        else
-            echo ""
-        fi
+        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 \
+        --border --reverse --color=fg:#00ffcc,bg:#1b1b1b,hl:#ffaa00,fg+:#ffffff,bg+:#005f5f,hl+:#ff5f00 \
+        --inline-info  --preview='cat {}' --preview-window=right:50%:wrap)
+        echo "$selected"
     else
         # Fallback to select
         PS3="Choose an operation: "
@@ -37,9 +35,9 @@ function show_menu_with_fzf() {
                 echo "$option"
                 break
             else
-                log "WARNING" "Invalid selection, showing menu again"
-                echo "Invalid option, please try again:"
-                continue
+                log "WARNING" "Invalid selection, showing menu again 2"
+                echo ""
+                break
             fi
         done
     fi
@@ -55,29 +53,16 @@ function dml_main(){
         local selected_option
         selected_option=$(show_menu_with_fzf "DML Operations for '$db_name'" "${options[@]}")
         
-        if [[ -z "$selected_option" ]]; then
-            log "INFO" "User cancelled menu selection"
-            continue
-        fi
-        
         case "$selected_option" in
             "Create Table")
                 log "INFO" "User selected Create Table operation"
                 read -p "Enter the table name to create: " table_name
-                if [[ -n "$table_name" ]]; then
-                    create_table "$db_name" "$table_name"
-                else
-                    log "WARNING" "Empty table name provided"
-                fi
+                create_table "$db_name" "$table_name"
                 ;;
             "Drop Table")
                 log "INFO" "User selected Drop Table operation"
                 read -p "Enter the table name to drop: " table_name
-                if [[ -n "$table_name" ]]; then
-                    drop_table "$db_name" "$table_name"
-                else
-                    log "WARNING" "Empty table name provided"
-                fi
+                drop_table "$db_name" "$table_name"
                 ;;
             "List Tables")
                 log "INFO" "User selected List Tables operation"
@@ -86,14 +71,10 @@ function dml_main(){
             "Select Table")
                 log "INFO" "User selected Select Table operation"
                 read -p "Enter the table name to select: " table_name
-                if [[ -n "$table_name" ]]; then
-                    if name_exists "$DML_DBMS_DIR_PATH/../database/$db_name" "$table_name"; then
-                        dml_table "$table_name"
-                    else
-                        log "ERROR" "Table '$table_name' does not exist in database '$db_name'"
-                    fi
+                if name_exists "$DML_DBMS_DIR_PATH/../database/$db_name" "$table_name"; then
+                    dml_table "$table_name"
                 else
-                    log "WARNING" "Empty table name provided"
+                    log "ERROR" "Table '$table_name' does not exist in database '$db_name'"
                 fi
                 ;;
             "Back")
@@ -118,12 +99,7 @@ function dml_table(){
         
         local selected_option
         selected_option=$(show_menu_with_fzf "Table Operations for '$table_name'" "${options[@]}")
-        
-        if [[ -z "$selected_option" ]]; then
-            log "INFO" "User cancelled menu selection"
-            continue
-        fi
-        
+         
         case "$selected_option" in
             "Table Info")
                 log "INFO" "User selected Table Info operation"
@@ -149,16 +125,6 @@ function dml_table(){
     done
 }
 
-# Validate input
-if [[ -z "$db_name" ]]; then
-    log "ERROR" "Missing required parameter: db_name"
-    exit 1
-fi
 
-# Check if database exists
-if [[ ! -d "$DML_DBMS_DIR_PATH/../database/$db_name" ]]; then
-    log "ERROR" "Database '$db_name' does not exist"
-    exit 1
-fi
 
 dml_main

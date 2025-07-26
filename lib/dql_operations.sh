@@ -6,6 +6,7 @@ base_path="$DQL_OPERATIONS_DIR_PATH/../database/$db_name"
 meta_file="$base_path/$table_name.meta"
 data_file="$base_path/$table_name"
 temp_file="$DQL_OPERATIONS_DIR_PATH/../temp/${table_name}_filtered.tmp"
+tmp="$DQL_OPERATIONS_DIR_PATH/../temp/delete_tmp"
 
 source "$DQL_OPERATIONS_DIR_PATH/validation.sh"
 source "$DQL_OPERATIONS_DIR_PATH/log.sh"
@@ -96,7 +97,7 @@ function filter_data {
         fi
 
         log "INFO" "Applying filter: field='$field', value='$value'"
-        awk -F: -v idx="$idx" -v val="$value" '$idx == val' "$temp_file" > tmp && mv tmp "$temp_file"
+        awk -F: -v idx="$idx" -v val="$value" '$idx == val' "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
 
         local row_count
         row_count=$(wc -l < "$temp_file")
@@ -136,7 +137,15 @@ function delete_filtered_rows {
     log "INFO" "Created backup: ${data_file}.bak"
 
     # Delete matching lines from main file
-    grep -v -F -x -f "$temp_file" "$data_file" > tmp && mv tmp "$data_file"
+
+    grep -v -F -x -f "$temp_file" "$data_file" > "$tmp" && mv "$tmp" "$data_file"
+    if [[ $? -ne 0 ]]; then
+        log "deleting all the data in the table"
+        echo "" > $data_file
+        return 0
+    fi
+ 
+    echo "data_file: $data_file"
     cp "$data_file" "$temp_file"  # reset temp to reflect delete
 
     log "INFO" "Successfully deleted $row_count rows from '$table_name'"

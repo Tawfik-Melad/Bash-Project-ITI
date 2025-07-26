@@ -1,4 +1,0 @@
-column_name:data_type:is_primary:is_nullable
-c1:int:yes:no
-c2:int:no:yes
-c3:string:no:no
