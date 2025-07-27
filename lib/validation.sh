@@ -17,7 +17,7 @@ is_valid_name() {
     fi
 
     if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
-        log "ERROR" "Invalid characters in name: $name"
+        log "ERROR" "Invalid name: $name - must start with a letter or underscore and contain only alphanumeric characters and underscores"
         return 1
     fi
 
@@ -51,10 +51,9 @@ name_exists() {
     local src="$1"
     local name="$2"
     if [[ -e "$src/$name" ]]; then
-        log "INFO" "Name '$name' exists in '$src'"
         return 0
     else
-        log "INFO" "Name '$name' does not exist in '$src'"
+        log "INFO" "Name '$name' does not exist "
         return 1
     fi
 }
@@ -111,10 +110,7 @@ validate_primary_key() {
         if [[ -s "$data_file" ]]; then
             local existing_values
             existing_values=$(cut -d: -f$((column_index + 1)) "$data_file")
-            echo $column_index
-            echo $data_file
-            echo $value
-            echo "hi -> $existing_values"
+
             if echo "$existing_values" | grep -xq "$value"; then
                 log "ERROR" "Primary key violation: '$value' already exists for $column_name."
                 return 1

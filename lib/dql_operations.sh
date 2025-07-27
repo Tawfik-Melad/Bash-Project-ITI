@@ -68,90 +68,86 @@ function select_field_with_fzf() {
 
 # Function: filter data based on user input
 function filter_data {
-    log "INFO" "Starting filter operation for table '$table_name'"
     
-    while true; do
-        local field
-        field=$(select_field_with_fzf)
-        
-        if [[ -z "$field" ]]; then
-            log "INFO" "User cancelled field selection"
-            break
-        fi
+    local field
+    field=$(select_field_with_fzf)
+    
+    if [[ -z "$field" ]]; then
+        log "INFO" "User cancelled field selection"
+        break
+    fi
 
-        # Get field index
-        local idx=-1
-        for i in "${!FIELDS[@]}"; do
-            [[ "${FIELDS[i]}" == "$field" ]] && idx=$((i+1))
-        done
-
-        if (( idx == -1 )); then
-            log "WARNING" "Invalid field selected: $field"
-            continue
-        fi
-
-        # Prompt for operator
-        if [[ "$USE_FZF" == true ]]; then
-            operator=$(echo -e "=\n!=\n>\n<\n>=\n<=" | fzf --header="Select operator" --height=12 --reverse --border)
-        else
-            echo "Available operators: = != > < >= <="
-            read -p "Enter operator: " operator
-        fi
-
-        if [[ -z "$operator" ]]; then
-            log "WARNING" "No operator selected"
-            continue
-        fi
-
-        # Prompt for value
-        read -p "Enter value to match: " value
-        if [[ -z "$value" ]]; then
-            log "WARNING" "Empty value provided for filtering"
-            continue
-        fi
-
-        log "INFO" "Applying filter: field='$field', operator='$operator', value='$value'"
-
-        # Build awk filter expression
-        awk_expr=""
-        case "$operator" in
-            "=")  awk_expr="\$idx == val" ;;
-            "!=") awk_expr="\$idx != val" ;;
-            ">")  awk_expr="\$idx > val" ;;
-            "<")  awk_expr="\$idx < val" ;;
-            ">=") awk_expr="\$idx >= val" ;;
-            "<=") awk_expr="\$idx <= val" ;;
-            *) log "ERROR" "Invalid operator: $operator"; continue ;;
-        esac
-
-        awk -F: -v idx="$idx" -v val="$value" "$awk_expr" "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
-
-        local row_count
-        row_count=$(wc -l < "$temp_file")
-        log "INFO" "Filter applied, $row_count rows remaining"
-
-        if (( row_count == 0 )); then
-            log "WARNING" "No matching rows found after filter"
-            break
-        fi
-
-        # Ask if user wants to apply another filter
-        if [[ "$USE_FZF" == true ]]; then
-            local continue_filter
-            continue_filter=$(echo -e "Yes\nNo" | fzf --header="Apply another filter?" --height=5 --reverse --border)
-            [[ "$continue_filter" != "Yes" ]] && break
-        else
-            read -p "Apply another filter? (y/n): " continue_filter
-            [[ "$continue_filter" != "y" && "$continue_filter" != "Y" ]] && break
-        fi
+    # Get field index
+    local idx=-1
+    for i in "${!FIELDS[@]}"; do
+        [[ "${FIELDS[i]}" == "$field" ]] && idx=$((i+1))
     done
+
+    if (( idx == -1 )); then
+        log "ERROR" "Invalid field selected: $field"
+        continue
+    fi
+
+    # Prompt for operator
+    if [[ "$USE_FZF" == true ]]; then
+        operator=$(echo -e "=\n!=\n>\n<\n>=\n<=" | fzf --header="Select operator" --height=12 --reverse --border)
+    else
+        log "INFO" "Available operators: = != > < >= <="
+        read -p "Enter operator: " operator
+    fi
+
+    if [[ -z "$operator" ]]; then
+        log "ERROR" "No operator selected"
+        continue
+    fi
+
+    # Prompt for value
+    read -p "Enter value to match: " value
+    if [[ -z "$value" ]]; then
+        log "ERROR" "Empty value provided for filtering"
+        continue
+    fi
+
+    log "INFO" "Applying filter: '$field''$operator''$value'"
+
+    # Build awk filter expression
+    awk_expr=""
+    case "$operator" in
+        "=")  awk_expr="\$idx == val" ;;
+        "!=") awk_expr="\$idx != val" ;;
+        ">")  awk_expr="\$idx > val" ;;
+        "<")  awk_expr="\$idx < val" ;;
+        ">=") awk_expr="\$idx >= val" ;;
+        "<=") awk_expr="\$idx <= val" ;;
+        *) log "ERROR" "Invalid operator: $operator"; continue ;;
+    esac
+
+    awk -F: -v idx="$idx" -v val="$value" "$awk_expr" "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
+
+    local row_count
+    row_count=$(wc -l < "$temp_file")
+    log "INFO" "Filter applied, $row_count rows remaining"
+
+    if (( row_count == 0 )); then
+        log "ERROR" "No matching rows found after filter"
+        return 1
+    fi
+
+
 }
 
 function delete_filtered_rows {
+
+    read -p "Are you sure you want to delete the filtered rows? (y/N): " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        log "INFO" "Delete operation cancelled by user"
+        return
+    fi
+
     log "INFO" "Starting delete operation for filtered rows in '$table_name'"
     
     if [[ ! -s "$temp_file" ]]; then
-        log "WARNING" "No filtered rows to delete"
+        log "ERROR" "No filtered rows to delete"
         return
     fi
 
@@ -167,12 +163,11 @@ function delete_filtered_rows {
 
     grep -v -F -x -f "$temp_file" "$data_file" > "$tmp" && mv "$tmp" "$data_file"
     if [[ $? -ne 0 ]]; then
-        log "deleting all the data in the table"
+        log "INFO" "Deleting all the rows in '$table_name'"
         echo "" > $data_file
         return 0
     fi
  
-    echo "data_file: $data_file"
     cp "$data_file" "$temp_file"  # reset temp to reflect delete
 
     log "INFO" "Successfully deleted $row_count rows from '$table_name'"
@@ -182,7 +177,7 @@ function update_filtered_rows {
     log "INFO" "Starting update operation for filtered rows in '$table_name'"
 
     if [[ ! -s "$temp_file" ]]; then
-        log "WARNING" "No rows to update"
+        log "ERROR" "No rows to update"
         return
     fi
 
@@ -212,13 +207,11 @@ function update_filtered_rows {
     fi
 
 
-    echo $field_metadata
     # Parse field metadata (format: field_name:data_type:nullable:primary_key)
     local data_type=$(echo "$field_metadata" | cut -d: -f2)
     local is_primary=$(echo "$field_metadata" | cut -d: -f3)
     local is_nullable=$(echo "$field_metadata" | cut -d: -f4)
 
-    echo "here -> $data_type $is_primary $field"
     log "INFO" "Field '$field' metadata: data_type=$data_type, nullable=$is_nullable, primary=$is_primary"
 
     read -p "Enter the new value for field '$field': " new_value
@@ -249,9 +242,8 @@ function update_filtered_rows {
 
         local line_count
         line_count=$(wc -l < "$temp_file")
-        echo "HI ----------> $line_count"
         if (( line_count > 1 )); then
-            echo "Error: you trying to update ($line_count) row with the same value for primary feild"
+            log "ERROR" "Cannot update primary key field '$field' for multiple rows at once"
             return 1
         fi
         validate_primary_key "$new_value" "$is_primary" "$data_file" "$idx" "$field"

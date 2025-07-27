@@ -8,6 +8,14 @@ log() {
     local message="$2"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+    echo "" >> "$LOG_FILE"
+
+}
+
+log_data() {
+    for line in "$@"; do
+        echo "$line" >> "$LOG_FILE"
+    done
+    
 }

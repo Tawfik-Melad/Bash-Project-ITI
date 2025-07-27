@@ -17,22 +17,28 @@ function show_menu_with_fzf() {
     local title="$1"
     shift
     local menu_options=("$@")
-    
-    if [[  "$USE_FZF" == true ]]; then
+
+    if [[ "$USE_FZF" == true ]]; then
+        local preview_cmd="tail -n 50 \"$DDL_DBMS_DIR_PATH/../logs/dbms.log\" \
+            | tac \
+            | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
+
         local selected
-        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=10 \
-        --border --reverse --color=fg:#00ffcc,bg:#1b1b1b,hl:#ffaa00,fg+:#ffffff,bg+:#005f5f,hl+:#ff5f00 \
-        --inline-info  --preview='cat {}' --preview-window=right:50%:wrap)
+        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=100% \
+        --border --reverse \
+        --color=fg:#c8ccd4,bg:#282c34,hl:#61afef,fg+:#ffffff,bg+:#3e4451,hl+:#98c379 \
+        --inline-info \
+        --preview="$preview_cmd" \
+        --preview-window=right:80%:wrap)
         echo "$selected"
     else
-        # Fallback to select
         PS3="Choose an operation: "
         select option in "${menu_options[@]}"; do
             if [[ -n "$option" ]]; then
                 echo "$option"
                 break
             else
-                log "WARNING" "Invalid selection, showing menu again 2"
+                log "WARNING" "Invalid selection, Trying again"
                 echo ""
                 break
             fi
@@ -40,12 +46,11 @@ function show_menu_with_fzf() {
     fi
 }
 
+
 function ddl_main(){
-    log "INFO" "Entering DDL interface"
     
     while true; do
         local options=("Create Database" "Drop Database" "List Databases" "Connect to Database" "Exit")
-        log "INFO" "Showing DDL menu options"
         
         local selected_option
         selected_option=$(show_menu_with_fzf "DDL Opedfsadfdrations" "${options[@]}")
@@ -53,26 +58,25 @@ function ddl_main(){
         
         case "$selected_option" in
             "Create Database")
-                log "INFO" "User selected Create Database operation"
+                log "INFO" "Create Database ...."
                 read -p "Enter the database name to create: " db_name
                 create_database "$db_name"
 
                 ;;
             "Drop Database")
-                log "INFO" "User selected Drop Database operation"
+                log "INFO" "Drop Database ...."
                 read -p "Enter the database name to drop: " db_name
                 delete_database "$db_name"
 
                 ;;
             "List Databases")
-                log "INFO" "User selected List Databases operation"
                     local databases
                     databases=$(ls -1 "$DDL_DBMS_DIR_PATH/../database" 2>/dev/null)
-                    echo -e "\n📂 Available Databases:"
-                    echo "$databases"
+                    log_data "$databases"
+                    log "INFO" "📂 Available databases: "
                 ;;
             "Connect to Database")
-                log "INFO" "User selected Connect to Database operation"
+                log "INFO" "Connecting to Database ...."
                 read -p "Enter the database name to connect: " db_name
                 if connect_to_database "$db_name"; then
                     log "INFO" "Successfully connected to database '$db_name'"
@@ -82,7 +86,7 @@ function ddl_main(){
                 fi
                 ;;
             "Exit")
-                log "INFO" "User selected Exit, terminating application"
+                log "INFO" "Terminating application and exiting"
                 echo "" > $DDL_DBMS_DIR_PATH/../logs/dbms.log
                 exit 0
                 ;;

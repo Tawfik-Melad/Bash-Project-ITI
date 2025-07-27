@@ -10,7 +10,7 @@ function create_table() {
     local table_name="$2"
     
     if name_exists "$DML_OPERATIONS_DIR_PATH/../database/$db_name" "$table_name" || ! is_valid_name "$table_name" ; then
-        log "ERROR" "Table name '$table_name' already exists or is invalid."
+        log "ERROR" "Failed to create table '$table_name' in database '$db_name'."
         return 1
     fi
 
@@ -31,6 +31,7 @@ function create_table() {
 
         while ! is_valid_name "$column_name" || [[ " ${columns[@]} " =~ " $column_name:" ]]; do
             log "ERROR" "Invalid or duplicate column name: $column_name"
+            echo "Invalid or duplicate column name: $column_name"
             read -p "Enter column name (or type 'done' to finish): " column_name
             if [[ "$column_name" == "done" ]]; then
                 return 0
@@ -40,6 +41,7 @@ function create_table() {
         read -p "Enter data type for $column_name: (int , string)" data_type
         while [[ "$data_type" != "int" && "$data_type" != "string" ]]; do
             log "ERROR" "Invalid data type: $data_type"
+            echo "Invalid data type: $data_type"
             read -p "Enter data type for $column_name: (int , string)" data_type
         done
 
@@ -50,6 +52,7 @@ function create_table() {
             read -p "Is $column_name a primary key? (yes/no): " is_primary
             while [[ "$is_primary" != "yes" && "$is_primary" != "no" ]]; do
                 log "ERROR" "Invalid input for primary key: $is_primary"
+                echo "Invalid input for primary key: $is_primary"
                 read -p "Is $column_name a primary key? (yes/no): " is_primary
             done
             if [[ "$is_primary" == "yes" ]]; then
@@ -62,6 +65,7 @@ function create_table() {
             read -p "Is $column_name nullable? (yes/no): " is_nullable
             while [[ "$is_nullable" != "yes" && "$is_nullable" != "no" ]]; do
                 log "ERROR" "Invalid input for nullable: $is_nullable"
+                echo "Invalid input for nullable: $is_nullable"
                 read -p "Is $column_name nullable? (yes/no): " is_nullable
                 continue
             done
@@ -108,7 +112,8 @@ function list_tables() {
     if [[ -z "$tables" ]]; then
         log "INFO" "No tables found in database '$db_name'"
     else
-        log "INFO" "Tables in database '$db_name': $tables"
+        log_data $tables
+        log "INFO" "📝 Tables in database '$db_name': "
     fi
 }
 
@@ -128,33 +133,37 @@ function table_info() {
         return 1
     fi
 
-    local column_count
+    local column_count row_count
     column_count=$(tail -n +2 "$meta_file" | wc -l)
-    local row_count
     row_count=$(wc -l < "$data_file")
 
-    log "INFO" "Table info for '$table_name': $column_count columns, $row_count rows"
-    
-    # Display table info for user
-    echo "Table: $table_name"
-    echo "Columns: $column_count | Rows: $row_count"
-    echo "---------------------------------------------"
-    echo "🔹 Column Details:"
-    echo
-    
-    tail -n +2 "$meta_file" | while IFS=':' read -r col_name data_type is_primary is_nullable; do
-        echo "  • $col_name ($data_type)"
-        if [[ "$is_primary" == "yes" ]]; then
-            echo "    Primary Key: Yes"
-        fi
-        if [[ "$is_nullable" == "no" ]]; then
-            echo "    Nullable: No"
-        fi
-        echo
+    local lines=()
+
+    lines+=("+-------------------+-------------+-------------+----------+")
+    lines+=("| Column Name       | Data Type   | Primary Key | Nullable |")
+    lines+=("+-------------------+-------------+-------------+----------+")
+
+    while IFS=':' read -r col_name data_type is_primary is_nullable; do
+        local line="| $(printf '%-17s' "$col_name") | $(printf '%-11s' "$data_type") | $(printf '%-11s' "$is_primary") | $(printf '%-8s' "$is_nullable") |"
+        lines+=("$line")
+    done < <(tail -n +2 "$meta_file")
+
+    lines+=("+-------------------+-------------+-------------+----------+")
+    lines+=("")
+    lines+=("📊 Columns: $column_count   🧾 Rows: $row_count")
+    lines+=("📂 Table: $table_name")
+
+    # Show to user
+    for line in "${lines[@]}"; do
+        echo -e "$line"
     done
-    
-    echo "---------------------------------------------"
+
+    # Log in reverse order for `tac`-based preview
+    for (( idx=${#lines[@]}-1 ; idx>=0 ; idx-- )); do
+        log_data "${lines[idx]}"
+    done
 }
+
 
 function insert_row() {
     local db_name="$1"
@@ -172,45 +181,59 @@ function insert_row() {
         return 1
     fi
 
+    # Ensure data file exists
+    touch "$data_file"
+
     log "INFO" "Starting row insertion for table '$table_name'"
 
     # Read column definitions
     mapfile -t columns < <(tail -n +2 "$meta_file")
     local insert_values=()
 
-    for column in "${columns[@]}"; do
-        IFS=':' read -r col_name data_type is_primary is_nullable <<< "$column"
+    for i in "${!columns[@]}"; do
+        IFS=':' read -r col_name data_type is_primary is_nullable <<< "${columns[i]}"
         
         while true; do
             read -p "Enter value for $col_name ($data_type): " value
             
-            # Validate primary key uniqueness
-            if [[ "$is_primary" == "yes" ]]; then
-                if grep -q "^$value:" "$data_file" 2>/dev/null; then
-                    log "ERROR" "Primary key value '$value' already exists"
+            # Check nullable constraint
+            if [[ -z "$value" ]]; then
+                if [[ "$is_nullable" == "no" ]]; then
+                    echo "❌ Column '$col_name' cannot be null"
+                    log "ERROR" "Null value not allowed for column '$col_name'"
                     continue
                 fi
+                insert_values+=("")  # true empty
+                break
             fi
-            
+
             # Validate data type
             if [[ "$data_type" == "int" ]]; then
-                if ! [[ "$value" =~ ^[0-9]+$ ]]; then
-                    log "ERROR" "Invalid integer value: $value"
+                if ! [[ "$value" =~ ^-?[0-9]+$ ]]; then
+                    echo "❌ Invalid integer value: $value"
+                    log "ERROR" "Invalid integer for '$col_name': $value"
                     continue
                 fi
             fi
-            
-            # Check nullable constraint
-            if [[ -z "$value" && "$is_nullable" == "no" ]]; then
-                log "ERROR" "Column '$col_name' cannot be null"
-                continue
+
+            # Validate primary key uniqueness (check correct column)
+            if [[ "$is_primary" == "yes" ]]; then
+                pk_index=$i
+                existing_values=$(cut -d: -f$((pk_index+1)) "$data_file")
+
+                if echo "$existing_values" | grep -Fxq "$value"; then
+                    echo "❌ Primary key value '$value' already exists"
+                    log "ERROR" "Duplicate primary key '$value' for column '$col_name'"
+                    continue
+                fi
             fi
-            
+
             insert_values+=("$value")
             break
         done
     done
 
     IFS=':'; echo "${insert_values[*]}" >> "$data_file"; unset IFS
+    echo "✅ Row inserted successfully."
     log "INFO" "Successfully inserted row into table '$table_name'"
 }

@@ -9,7 +9,7 @@ function create_database() {
     local db_name="$1"
     
     if ! is_valid_name "$db_name" || name_exists "$DDL_OPERATIONS_DIR_PATH/../database" "$db_name"; then
-        log "ERROR" "Invalid database name '$db_name' or it already exists"
+        log "ERROR" "Failed to create database '$db_name' "
         return 1
     fi
     
@@ -28,7 +28,7 @@ function delete_database() {
 
     read -p "Are you sure you want to delete the database '$db_name'? (yes/no): " confirmation
     if [[ "$confirmation" != "yes" ]]; then
-        log "INFO" "Deletion of database '$db_name' cancelled by user"
+        log "INFO" "You cancelled deletion database '$db_name' "
         return 0
     fi
     
@@ -41,10 +41,8 @@ function connect_to_database() {
     local db_name="$1"
     
     if name_exists "$DDL_OPERATIONS_DIR_PATH/../database" "$db_name"; then
-        log "INFO" "Connecting to database '$db_name'"
         return 0
     else
-        log "ERROR" "Database '$db_name' does not exist"
         return 1
     fi
 }
