@@ -1,3 +1,2 @@
-temp/
-logs/
-database/
+temp/*
+database/*
