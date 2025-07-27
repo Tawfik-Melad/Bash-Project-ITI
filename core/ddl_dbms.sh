@@ -83,6 +83,7 @@ function ddl_main(){
                 ;;
             "Exit")
                 log "INFO" "User selected Exit, terminating application"
+                echo "" > $DDL_DBMS_DIR_PATH/../logs/dbms.log
                 exit 0
                 ;;
             *)

@@ -90,14 +90,41 @@ function filter_data {
             continue
         fi
 
+        # Prompt for operator
+        if [[ "$USE_FZF" == true ]]; then
+            operator=$(echo -e "=\n!=\n>\n<\n>=\n<=" | fzf --header="Select operator" --height=12 --reverse --border)
+        else
+            echo "Available operators: = != > < >= <="
+            read -p "Enter operator: " operator
+        fi
+
+        if [[ -z "$operator" ]]; then
+            log "WARNING" "No operator selected"
+            continue
+        fi
+
+        # Prompt for value
         read -p "Enter value to match: " value
         if [[ -z "$value" ]]; then
             log "WARNING" "Empty value provided for filtering"
             continue
         fi
 
-        log "INFO" "Applying filter: field='$field', value='$value'"
-        awk -F: -v idx="$idx" -v val="$value" '$idx == val' "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
+        log "INFO" "Applying filter: field='$field', operator='$operator', value='$value'"
+
+        # Build awk filter expression
+        awk_expr=""
+        case "$operator" in
+            "=")  awk_expr="\$idx == val" ;;
+            "!=") awk_expr="\$idx != val" ;;
+            ">")  awk_expr="\$idx > val" ;;
+            "<")  awk_expr="\$idx < val" ;;
+            ">=") awk_expr="\$idx >= val" ;;
+            "<=") awk_expr="\$idx <= val" ;;
+            *) log "ERROR" "Invalid operator: $operator"; continue ;;
+        esac
+
+        awk -F: -v idx="$idx" -v val="$value" "$awk_expr" "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
 
         local row_count
         row_count=$(wc -l < "$temp_file")
