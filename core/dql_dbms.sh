@@ -24,8 +24,7 @@ function show_menu_with_fzf() {
     local menu_options=("$@")
 
     if [[ "$USE_FZF" == true ]]; then
-        local preview_cmd="tail -n 50 \"$DQL_DBMS_DIR_PATH/../logs/dbms.log\" \
-            | tac \
+        local preview_cmd="tac \"$DQL_DBMS_DIR_PATH/../logs/dbms.log\" \
             | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
 
         local selected
@@ -63,7 +62,7 @@ function dql_main(){
     log "INFO" "You using database '$db_name', table '$table_name'"
     
     # Initial table display
-    display_table_data
+    log_filtered_data
 
     while true; do
         
@@ -75,22 +74,23 @@ function dql_main(){
             "Filter")
                 log "INFO" "Filtering data in table '$table_name' ..."
                 filter_data
-                display_table_data
+                log_filtered_data
                 ;;
             "Update")
                 log "INFO" "Updating data in table '$table_name' ..."
                 update_filtered_rows
-                display_table_data
+                log_filtered_data
                 ;;
             "Delete")
                 log "INFO" "Deleting data in table '$table_name' ..."
                 delete_filtered_rows
-                display_table_data
+                reset_filter
+                log_filtered_data
                 ;;
             "Reset Filter")
                 log "INFO" "Resetting filter for table '$table_name' ..."
                 reset_filter
-                display_table_data
+                log_filtered_data
                 ;;
             "Back")
                 echo "" > $DQL_DBMS_DIR_PATH/../logs/dbms.log

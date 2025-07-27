@@ -2,6 +2,9 @@ VALIDATION_DIR_PATH="$(dirname ${BASH_SOURCE[0]})"
 
 bash $VALIDATION_DIR_PATH/log.sh
 
+DELIM=$'\x1F'
+
+
 is_valid_name() {
     local name="$1"
     local max_length=30
@@ -108,15 +111,15 @@ validate_primary_key() {
 
     if [[ "$is_primary" == "yes" ]]; then
         if [[ -s "$data_file" ]]; then
-            local existing_values
-            existing_values=$(cut -d: -f$((column_index + 1)) "$data_file")
-
-            if echo "$existing_values" | grep -xq "$value"; then
-                log "ERROR" "Primary key violation: '$value' already exists for $column_name."
-                return 1
-            fi
+            while IFS=$DELIM read -r -a fields; do
+                if [[ "${fields[$column_index]}" == "$value" ]]; then
+                    log "ERROR" "Primary key violation: '$value' already exists for $column_name."
+                    return 1
+                fi
+            done < "$data_file"
         fi
     fi
     return 0
 }
+
 

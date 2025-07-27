@@ -8,6 +8,8 @@ data_file="$base_path/$table_name"
 temp_file="$DQL_OPERATIONS_DIR_PATH/../temp/${table_name}_filtered.tmp"
 tmp="$DQL_OPERATIONS_DIR_PATH/../temp/delete_tmp"
 
+DELIM=$'\x1F'
+
 source "$DQL_OPERATIONS_DIR_PATH/validation.sh"
 source "$DQL_OPERATIONS_DIR_PATH/log.sh"
 
@@ -31,26 +33,47 @@ function reset_filter {
 }
 
 # Function: print header
-function print_header {
-    echo ""
-    for i in "${!FIELDS[@]}"; do
-        printf "| %-15s " "${FIELDS[i]}"
+function log_filtered_data() {
+    mapfile -t meta_lines < "$meta_file"
+    local headers=()
+    for line in "${meta_lines[@]:1}"; do
+        IFS=':' read -r col_name _ <<< "$line"
+        headers+=("$col_name")
     done
-    echo -e "|\n$(printf '=%.0s' {1..100})"
+
+    local lines_to_log=()
+
+    lines_to_log+=("-----------------------------------------")
+   # Data rows
+    mapfile -t rows < "$temp_file"  # Read file into array
+    for (( i=${#rows[@]}-1; i>=0; i-- )); do  # Loop in reverse
+        IFS="$DELIM" read -ra fields <<< "${rows[i]}"
+        local data_row="|"
+        for f in "${fields[@]}"; do
+            data_row+=" $(printf '%-12s' "$f") |"
+        done
+        lines_to_log+=("$data_row")
+    done
+
+    # Header row
+    lines_to_log+=("-----------------------------------------")
+    local header_row="|"
+    for h in "${headers[@]}"; do
+        header_row+=" $(printf '%-12s' "$h") |"
+    done
+    lines_to_log+=("$header_row")
+
+ 
+    lines_to_log+=("-----------------------------------------")
+    lines_to_log+=("Filtered Data from '$table_name':")
+    lines_to_log+=("-----------------------------------------")
+
+
+
+    log_data "${lines_to_log[@]}"
+
 }
 
-# Function: print data rows
-function print_data {
-    awk -F: '
-        {
-            printf "| %-15s", $1;
-            for (i = 2; i <= NF; i++) {
-                printf "| %-15s", $i;
-            }
-            print " |"
-        }
-    ' "$1"
-}
 
 # Function: show field selection with fzf
 function select_field_with_fzf() {
@@ -85,7 +108,7 @@ function filter_data {
 
     if (( idx == -1 )); then
         log "ERROR" "Invalid field selected: $field"
-        continue
+        return 1
     fi
 
     # Prompt for operator
@@ -98,14 +121,14 @@ function filter_data {
 
     if [[ -z "$operator" ]]; then
         log "ERROR" "No operator selected"
-        continue
+        return 1
     fi
 
     # Prompt for value
     read -p "Enter value to match: " value
     if [[ -z "$value" ]]; then
         log "ERROR" "Empty value provided for filtering"
-        continue
+        return 1
     fi
 
     log "INFO" "Applying filter: '$field''$operator''$value'"
@@ -122,7 +145,7 @@ function filter_data {
         *) log "ERROR" "Invalid operator: $operator"; continue ;;
     esac
 
-    awk -F: -v idx="$idx" -v val="$value" "$awk_expr" "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
+    awk -F"$DELIM" -v idx="$idx" -v val="$value" "$awk_expr" "$temp_file" > "$tmp" && mv "$tmp" "$temp_file"
 
     local row_count
     row_count=$(wc -l < "$temp_file")
@@ -253,7 +276,7 @@ function update_filtered_rows {
 
     log "INFO" "Updating field '$field' to value '$new_value' for filtered rows"
 
-    awk -F: -v OFS=: -v col="$((idx+1))" -v val="$new_value" '
+    awk -F"$DELIM" -v OFS="$DELIM" -v col="$((idx+1))" -v val="$new_value" '
     BEGIN {
         while ((getline line < "'$temp_file'") > 0) {
             filtered[line] = 1

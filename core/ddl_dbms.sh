@@ -19,9 +19,9 @@ function show_menu_with_fzf() {
     local menu_options=("$@")
 
     if [[ "$USE_FZF" == true ]]; then
-        local preview_cmd="tail -n 50 \"$DDL_DBMS_DIR_PATH/../logs/dbms.log\" \
-            | tac \
-            | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
+        local preview_cmd="tac \"$DDL_DBMS_DIR_PATH/../logs/dbms.log\" \
+        | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/' "
+
 
         local selected
         selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=100% \
@@ -29,7 +29,8 @@ function show_menu_with_fzf() {
         --color=fg:#c8ccd4,bg:#282c34,hl:#61afef,fg+:#ffffff,bg+:#3e4451,hl+:#98c379 \
         --inline-info \
         --preview="$preview_cmd" \
-        --preview-window=right:80%:wrap)
+        --preview-window=right:80%:wrap \
+        --bind "ctrl-l:execute(less +G '$DDL_DBMS_DIR_PATH/../logs/dbms.log')" )
         echo "$selected"
     else
         PS3="Choose an operation: "

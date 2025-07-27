@@ -5,6 +5,7 @@ DML_OPERATIONS_DIR_PATH="$(dirname ${BASH_SOURCE[0]})"
 source "$DML_OPERATIONS_DIR_PATH/validation.sh"
 source "$DML_OPERATIONS_DIR_PATH/log.sh"
 
+
 function create_table() {
     local db_name="$1"
     local table_name="$2"
@@ -96,6 +97,8 @@ function drop_table() {
 
     return 0
 }
+
+DELIM=$'\x1F'  # Unit Separator
 
 function list_tables() {
     local db_name="$1"
@@ -218,14 +221,14 @@ function insert_row() {
 
             # Validate primary key uniqueness (check correct column)
             if [[ "$is_primary" == "yes" ]]; then
-                pk_index=$i
-                existing_values=$(cut -d: -f$((pk_index+1)) "$data_file")
+                log "INFO" "checking primary key uniqueness for '$col_name' with value '$value'"
 
-                if echo "$existing_values" | grep -Fxq "$value"; then
-                    echo "❌ Primary key value '$value' already exists"
-                    log "ERROR" "Duplicate primary key '$value' for column '$col_name'"
+                if ! validate_primary_key "$value" "$is_primary" "$data_file" "$i" "$col_name" ;then
+                    echo "❌ Primary key violation for '$col_name': $value"
+                    log "ERROR" "Primary key violation for '$col_name': $value"
                     continue
                 fi
+               
             fi
 
             insert_values+=("$value")
@@ -233,7 +236,9 @@ function insert_row() {
         done
     done
 
-    IFS=':'; echo "${insert_values[*]}" >> "$data_file"; unset IFS
+    IFS="$DELIM"
+    echo "${insert_values[*]}" >> "$data_file"
+    unset IFS
     echo "✅ Row inserted successfully."
     log "INFO" "Successfully inserted row into table '$table_name'"
 }
