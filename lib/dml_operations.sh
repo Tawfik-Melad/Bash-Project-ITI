@@ -156,11 +156,6 @@ function table_info() {
     lines+=("📊 Columns: $column_count   🧾 Rows: $row_count")
     lines+=("📂 Table: $table_name")
 
-    # Show to user
-    for line in "${lines[@]}"; do
-        echo -e "$line"
-    done
-
     # Log in reverse order for `tac`-based preview
     for (( idx=${#lines[@]}-1 ; idx>=0 ; idx-- )); do
         log_data "${lines[idx]}"

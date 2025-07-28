@@ -28,7 +28,7 @@ function show_menu_with_fzf() {
             | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
 
         local selected
-        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=25 \
+        selected=$(printf '%s\n' "${menu_options[@]}" | fzf --header="$title" --height=100% \
         --border --reverse \
         --color=fg:#c8ccd4,bg:#282c34,hl:#61afef,fg+:#ffffff,bg+:#3e4451,hl+:#98c379 \
         --inline-info \

@@ -88,7 +88,7 @@ function ddl_main(){
                 ;;
             "Exit")
                 log "INFO" "Terminating application and exiting"
-                echo "" > $DDL_DBMS_DIR_PATH/../logs/dbms.log
+                echo "MY DBMS BASH PROJECT ITI" > $DDL_DBMS_DIR_PATH/../logs/dbms.log
                 exit 0
                 ;;
             *)

@@ -78,8 +78,16 @@ function log_filtered_data() {
 # Function: show field selection with fzf
 function select_field_with_fzf() {
     if [[ "$USE_FZF" == true ]]; then
+        local preview_cmd="tac \"$DQL_OPERATIONS_DIR_PATH/../logs/dbms.log\" \
+            | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
+
         local selected
-        selected=$(printf '%s\n' "${FIELDS[@]}" | fzf --header="Select field to filter" --height=8 --reverse --border)
+        selected=$(printf '%s\n' "${FIELDS[@]}" | fzf --header="Select field to filter to" --height=100% \
+        --border --reverse \
+        --color=fg:#c8ccd4,bg:#282c34,hl:#61afef,fg+:#ffffff,bg+:#3e4451,hl+:#98c379 \
+        --inline-info \
+        --preview="$preview_cmd" \
+        --preview-window=right:80%:wrap)
         echo "$selected"
     else
         # Fallback to simple selection
@@ -97,7 +105,7 @@ function filter_data {
     
     if [[ -z "$field" ]]; then
         log "INFO" "User cancelled field selection"
-        break
+        return 1
     fi
 
     # Get field index
@@ -113,7 +121,15 @@ function filter_data {
 
     # Prompt for operator
     if [[ "$USE_FZF" == true ]]; then
-        operator=$(echo -e "=\n!=\n>\n<\n>=\n<=" | fzf --header="Select operator" --height=12 --reverse --border)
+        local preview_cmd="tac \"$DQL_OPERATIONS_DIR_PATH/../logs/dbms.log\" \
+        | sed -E 's/(\[ERROR\])/\x1b[31m\1\x1b[0m/; s/(\[INFO\])/\x1b[32m\1\x1b[0m/'"
+
+        operator=$(echo -e "=\n!=\n>\n<\n>=\n<=" | fzf --header="Select operation" --height=100% \
+        --border --reverse \
+        --color=fg:#c8ccd4,bg:#282c34,hl:#61afef,fg+:#ffffff,bg+:#3e4451,hl+:#98c379 \
+        --inline-info \
+        --preview="$preview_cmd" \
+        --preview-window=right:80%:wrap)
     else
         log "INFO" "Available operators: = != > < >= <="
         read -p "Enter operator: " operator
@@ -126,10 +142,6 @@ function filter_data {
 
     # Prompt for value
     read -p "Enter value to match: " value
-    if [[ -z "$value" ]]; then
-        log "ERROR" "Empty value provided for filtering"
-        return 1
-    fi
 
     log "INFO" "Applying filter: '$field''$operator''$value'"
 
