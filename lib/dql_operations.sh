@@ -281,7 +281,11 @@ function update_filtered_rows {
             log "ERROR" "Cannot update primary key field '$field' for multiple rows at once"
             return 1
         fi
-        validate_primary_key "$new_value" "$is_primary" "$data_file" "$idx" "$field"
+
+        if ! validate_primary_key "$new_value" "$is_primary" "$data_file" "$idx" "$field";then
+            log "ERROR" "Primary key validation failed for field '$field'"
+            return 1
+        fi
     fi
 
        
